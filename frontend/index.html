@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: white;
+            margin: 0;
+        }
+        #menu {
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        #game-container {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>Snake Game</h1>
+        <button onclick="startGame()">Start Game</button>
+        <button onclick="viewHighScores()">View High Scores</button>
+    </div>
+    <div id="game-container">
+        <canvas id="game-canvas" width="640" height="480"></canvas>
+        <script src="/src/components/SnakeGame.js"></script>
+    </div>
+    <script>
+        function startGame() {
+            // Hide the menu and show the game container
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+        }
+
+        function viewHighScores() {
+            // Fetch and display high scores
+            fetch('http://localhost:3000/api/high-scores')
+                .then(response => response.json())
+                .then(data => {
+                    let highScores = 'High Scores:\n';
+                    data.forEach(score => {
+                        highScores += `Player: ${score.player}, Score: ${score.score}\n`;
+                    });
+                    alert(highScores);
+                })
+                .catch(error => console.error('Error fetching high scores:', error));
+        }
+    </script>
+</body>
+</html>
