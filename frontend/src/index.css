@@ -11,31 +11,3 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
-
-.custom-button {
-  padding: 10px 20px;
-  margin: 10px;
-  font-size: 16px;
-  cursor: pointer;
-}
-
-#menu {
-  text-align: center;
-  margin-top: 20%;
-}
-
-#game-container {
-  margin: 0 auto;
-  border: 2px solid #000;
-  border-radius: 10px;
-}
-
-.scoreboard {
-  text-align: center;
-  margin-top: 20px;
-}
-
-.scoreboard div {
-  font-size: 18px;
-  margin: 5px;
-}
