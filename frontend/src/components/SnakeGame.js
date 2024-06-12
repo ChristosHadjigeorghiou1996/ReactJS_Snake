@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Phaser from "phaser";
+import "./SnakeGame.css"; // Import your CSS file for additional styling
 
 const SnakeGame = () => {
   const [score, setScore] = useState(0);
@@ -8,12 +9,11 @@ const SnakeGame = () => {
   });
   const [gameStarted, setGameStarted] = useState(false);
   const [gameInstance, setGameInstance] = useState(null);
+  const [showKeyBindings, setShowKeyBindings] = useState(false);
+  const [showHighScores, setShowHighScores] = useState(false);
+  const [highScores, setHighScores] = useState([]);
 
   useEffect(() => {
-    if (gameInstance) {
-      gameInstance.destroy(true);
-    }
-    
     let game;
 
     if (gameStarted) {
@@ -61,7 +61,7 @@ const SnakeGame = () => {
           "food"
         );
         cursors = this.input.keyboard.createCursorKeys();
-        // key bindings of q and p 
+
         this.input.keyboard.on('keydown-Q', quitGame, this);
         this.input.keyboard.on('keydown-P', togglePause, this);
 
@@ -69,7 +69,6 @@ const SnakeGame = () => {
         for (let i = 0; i < 3; i++) {
           snake.create(100 - i * 20, 100, "snake");
         }
-
       }
 
       function update(time) {
@@ -81,19 +80,6 @@ const SnakeGame = () => {
           moveSnake();
           moveTimer = time + 150;
         }
-
-        if (cursors.left.isDown && direction !== "RIGHT") {
-          direction = "LEFT";
-        } else if (cursors.right.isDown && direction !== "LEFT") {
-          direction = "RIGHT";
-        } else if (cursors.up.isDown && direction !== "DOWN") {
-          direction = "UP";
-        } else if (cursors.down.isDown && direction !== "UP") {
-          direction = "DOWN";
-        }
-
-        // Check for collisions
-        this.physics.world.wrap(snake, 0, true);
 
         if (
           Phaser.Geom.Intersects.RectangleToRectangle(
@@ -161,57 +147,101 @@ const SnakeGame = () => {
 
       function quitGame() {
         game.destroy(true);
-        setGameStarted(false)
-        setGameInstance(null);
-        document.getElementById('menu').style.display = 'block';
-        document.getElementById('game-container').style.display = 'none';
+        setGameStarted(false);
+        document.getElementById("menu").style.display = "block";
+        document.getElementById("game-container").style.display = "none";
       }
-  
+
       function togglePause() {
         isPaused = !isPaused;
       }
-  
 
       return () => {
-        if (gameInstance) {
-          gameInstance.destroy(true);
+        if (game) {
+          game.destroy(true);
         }
       };
     }
   }, [gameStarted]);
 
   const startGame = () => {
-    setGameStarted(true);
+    setGameStarted(true); // Set gameStarted to true to start the game
     document.getElementById("menu").style.display = "none";
     document.getElementById("game-container").style.display = "block";
   };
 
-  const viewHighScores = () => {
+  const fetchHighScores = () => {
     fetch("http://localhost:3000/api/high-scores")
       .then((response) => response.json())
       .then((data) => {
-        let highScores = "High Scores:\n";
-        data.forEach((score) => {
-          highScores += `Player: ${score.player}, Score: ${score.score}\n`;
-        });
-        alert(highScores);
+        setHighScores(data);
       })
-      .catch((error) => console.error("Error fetching high scores:", error));
+      .catch((error) =>
+        console.error("Error fetching high scores:", error)
+      );
+  };
+
+  const toggleKeyBindings = () => {
+    setShowKeyBindings(!showKeyBindings);
+  };
+
+  const toggleHighScores = () => {
+    setShowHighScores(!showHighScores);
+    if (!showHighScores) {
+      fetchHighScores();
+    }
   };
 
   return (
     <div className="container">
+      <h1>Snake Game</h1>
       <div id="menu">
-        <h1>Snake Game</h1>
-        <button className="btn btn-primary custom-button" onClick={startGame}>
+        <button
+          className="btn btn-primary custom-button"
+          onClick={startGame}
+        >
           Start Game
         </button>
         <button
           className="btn btn-secondary custom-button"
-          onClick={viewHighScores}
+          onClick={toggleHighScores}
         >
-          View High Scores
+          {showHighScores ? "Hide High Scores" : "View High Scores"}
         </button>
+        <button
+          className="btn btn-info custom-button"
+          onClick={toggleKeyBindings}
+        >
+          {showKeyBindings ? "Hide Key Bindings" : "Show Key Bindings"}
+        </button>
+        {showKeyBindings && (
+          <div className="key-bindings">
+            <h3>Key Bindings</h3>
+            <ul>
+              <li>
+                <strong>Arrow Keys:</strong> Move Snake
+              </li>
+              <li>
+                <strong>Q:</strong> Quit Game
+              </li>
+              <li>
+                <strong>P:</strong> Pause/Resume Game
+              </li>
+            </ul>
+          </div>
+        )}
+        {showHighScores && (
+          <div className="high-scores">
+            <h3>High Scores</h3>
+            <ul>
+              {highScores.map((score, index) => (
+                <li key={index}>
+                  Player: {score.player}, Score: {score.score}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
       <div
         id="game-container"
