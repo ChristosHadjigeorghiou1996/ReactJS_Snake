@@ -20,11 +20,22 @@ Can toggle the high scores and key bindings by toggling on the main menu
 
 <img src="repo_assets/images/toggled_high_score_and_key_bindings.png" alt="Toggled high scores and key bindings image" width="600">
 
+
+Each time a level is passed the success screen is rendered:
+
+<img src="repo_assets/images/successful_level.png" alt="Level completed, click to proceed" width="600">
+
+Each time a level or high score mode fails the game over screen is rendered:
+
+<img src="repo_assets/images/level_failed.png" alt="Game over, click to proceed" width="600">
+
+
+
 ### Single player game
 - Story mode
   - Incrementing levels of difficulty
   - Level 1 has to capture 5 food items with no obstacles
-  - Level 2 has surrounding obstacles
+  - Level 2 has some obstacles
   - Level 5 could get an item
     - Move faster
     - Increase lives (pve instead of pvp?)
