@@ -1,17 +1,31 @@
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Phaser from "phaser";
-import "./SnakeGame.css"; // Import your CSS file for additional styling
+import "./SnakeGame.css";
+import levels from "./levels";
 
 const SnakeGame = () => {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
-    return localStorage.getItem("highScore") || 0;
+    const storedHighScore = localStorage.getItem("highScore");
+    return storedHighScore ? parseInt(storedHighScore, 10) : 0;
   });
   const [gameStarted, setGameStarted] = useState(false);
-  const [gameInstance, setGameInstance] = useState(null);
+  const [showNextLevelScreen, setShowNextLevelScreen] = useState(false);
+  const [showLoseScreen, setShowLoseScreen] = useState(false);
   const [showKeyBindings, setShowKeyBindings] = useState(false);
   const [showHighScores, setShowHighScores] = useState(false);
   const [highScores, setHighScores] = useState([]);
+
+  const [currentLevel, setCurrentLevel] = useState(1);
+  const [storyMode, setStoryMode] = useState(false);
+  const [foodsConsumed, setFoodsConsumed] = useState(0);
+
+  const pausedRef = useRef(false);
+  const directionRef = useRef("RIGHT");
+
+  const GAME_WIDTH = 640;
+  const GAME_HEIGHT = 480;
+  const CELL_SIZE = 20;
 
   useEffect(() => {
     let game;
@@ -19,16 +33,13 @@ const SnakeGame = () => {
     if (gameStarted) {
       const config = {
         type: Phaser.AUTO,
-        width: 640,
-        height: 480,
+        width: GAME_WIDTH,
+        height: GAME_HEIGHT,
         parent: "game-container",
         scene: {
           preload: preload,
           create: create,
           update: update,
-          extend: {
-            restartGame: restartGame,
-          },
         },
         physics: {
           default: "arcade",
@@ -39,121 +50,249 @@ const SnakeGame = () => {
       };
 
       game = new Phaser.Game(config);
-      setGameInstance(game);
-
-      let snake;
-      let food;
+      let snakeGroup;
+      let foodGroup;
+      let obstacleGroup;
       let cursors;
-      let direction = "RIGHT";
-      let moveTimer = 0;
-      let isPaused = false;
+      let currentStageLevel = storyMode ? levels[currentLevel - 1] : levels[0];
 
       function preload() {
-        this.load.image("snake", "assets/snake.png");
-        this.load.image("food", "assets/food.png");
+        this.load.image("snake", "/assets/snake.png");
+        this.load.image("food", "/assets/food.png");
+        this.load.image("obstacle", "/assets/obstacle.png");
       }
 
       function create() {
-        snake = this.physics.add.group();
-        food = this.physics.add.sprite(
-          Phaser.Math.Between(0, 31) * 20,
-          Phaser.Math.Between(0, 23) * 20,
+        cursors = this.input.keyboard.createCursorKeys();
+        // quit
+        this.input.keyboard.on("keydown-Q", quitGame, this);
+        // pause
+        this.input.keyboard.on("keydown-P", togglePause, this);
+        // prevent going in reverse direction from current direction
+        this.input.keyboard.on("keydown-LEFT", () => {
+          if (directionRef.current !== "RIGHT") {
+            directionRef.current = "LEFT";
+          }
+        });
+        this.input.keyboard.on("keydown-RIGHT", () => {
+          if (directionRef.current !== "LEFT") {
+            directionRef.current = "RIGHT";
+          }
+        });
+        this.input.keyboard.on("keydown-UP", () => {
+          if (directionRef.current !== "DOWN") {
+            directionRef.current = "UP";
+          }
+        });
+        this.input.keyboard.on("keydown-DOWN", () => {
+          if (directionRef.current !== "UP") {
+            directionRef.current = "DOWN";
+          }
+        });
+        snakeGroup = this.physics.add.group();
+        const snakeHead = snakeGroup.create(
+          currentStageLevel.snakeStartPosition.x,
+          currentStageLevel.snakeStartPosition.y,
+          "snake"
+        );
+        snakeHead.setOrigin(0);
+
+        foodGroup = this.physics.add.group();
+        const food = foodGroup.create(
+          currentStageLevel.foodPosition.x,
+          currentStageLevel.foodPosition.y,
           "food"
         );
-        cursors = this.input.keyboard.createCursorKeys();
+        food.setOrigin(0);
 
-        this.input.keyboard.on('keydown-Q', quitGame, this);
-        this.input.keyboard.on('keydown-P', togglePause, this);
+        obstacleGroup = this.physics.add.group();
+        currentStageLevel.obstacles.forEach((obstacle) => {
+          obstacleGroup.create(obstacle.x, obstacle.y, "obstacle");
+        });
 
-        // Create initial snake body
-        for (let i = 0; i < 3; i++) {
-          snake.create(100 - i * 20, 100, "snake");
-        }
+        this.physics.add.collider(
+          snakeGroup,
+          obstacleGroup,
+          snakeCollision,
+          null,
+          this
+        );
+        this.physics.add.collider(
+          snakeGroup,
+          foodGroup,
+          foodCollision,
+          null,
+          this
+        );
+        this.physics.add.collider(
+          foodGroup,
+          obstacleGroup,
+          handleFoodObstacleCollision,
+          null,
+          this
+        );
       }
 
-      function update(time) {
-        if (isPaused) {
-          return;
-        }
+      function update() {
+        const snakeHead = snakeGroup.getChildren()[0];
 
-        if (time > moveTimer) {
-          moveSnake();
-          moveTimer = time + 150;
-        }
+        if (!pausedRef.current && snakeHead) {
+          const speed = 150;
+          if (directionRef.current === "LEFT") snakeHead.setVelocity(-speed, 0);
+          else if (directionRef.current === "RIGHT")
+            snakeHead.setVelocity(speed, 0);
+          else if (directionRef.current === "UP")
+            snakeHead.setVelocity(0, -speed);
+          else if (directionRef.current === "DOWN")
+            snakeHead.setVelocity(0, speed);
 
-        if (
-          Phaser.Geom.Intersects.RectangleToRectangle(
-            snake.getChildren()[0].getBounds(),
-            food.getBounds()
-          )
-        ) {
-          food.setPosition(
-            Phaser.Math.Between(0, 31) * 20,
-            Phaser.Math.Between(0, 23) * 20
-          );
-          const tail = snake.getChildren()[snake.getChildren().length - 1];
-          snake.create(tail.x, tail.y, "snake");
-          setScore((prevScore) => prevScore + 10);
-        }
+          const snakeSegments = snakeGroup.getChildren();
+          for (let i = snakeSegments.length - 1; i > 0; i--) {
+            snakeSegments[i].x = snakeSegments[i - 1].x;
+            snakeSegments[i].y = snakeSegments[i - 1].y;
+          }
 
-        // Check for self-collision
-        for (let i = 1; i < snake.getChildren().length; i++) {
-          if (
-            Phaser.Geom.Intersects.RectangleToRectangle(
-              snake.getChildren()[0].getBounds(),
-              snake.getChildren()[i].getBounds()
-            )
-          ) {
-            if (score > highScore) {
-              localStorage.setItem("highScore", score);
-              setHighScore(score);
-            }
-            restartGame();
-            setScore(0);
+          this.physics.world.wrap(snakeHead, 0);
+          this.physics.world.wrap(snakeGroup, 0);
+
+          if (this.pauseText) {
+            this.pauseText.destroy();
+            this.pauseText = null;
+          }
+        } else if (snakeHead) {
+          snakeHead.setVelocity(0);
+          if (!this.pauseText) {
+            this.pauseText = this.add
+              .text(
+                GAME_WIDTH / 2,
+                GAME_HEIGHT / 2,
+                "Paused\nPress P to continue",
+                { fontFamily: "Arial", fontSize: 48, color: "#ff0000" }
+              )
+              .setOrigin(0.5);
           }
         }
       }
 
-      function moveSnake() {
-        const head = snake.getChildren()[0];
-        let newHeadX = head.x;
-        let newHeadY = head.y;
-
-        if (direction === "LEFT") {
-          newHeadX -= 20;
-        } else if (direction === "RIGHT") {
-          newHeadX += 20;
-        } else if (direction === "UP") {
-          newHeadY -= 20;
-        } else if (direction === "DOWN") {
-          newHeadY += 20;
-        }
-
-        // Move the body
-        Phaser.Actions.ShiftPosition(snake.getChildren(), newHeadX, newHeadY);
+      function snakeCollision() {
+        setShowLoseScreen(true);
+        handleGameEnd();
       }
 
-      function restartGame() {
-        snake.clear(true, true);
-        food.setPosition(
-          Phaser.Math.Between(0, 31) * 20,
-          Phaser.Math.Between(0, 23) * 20
-        );
-        direction = "RIGHT";
-        for (let i = 0; i < 3; i++) {
-          snake.create(100 - i * 20, 100, "snake");
+      function handleFoodObstacleCollision(food, obstacle) {
+        food.destroy();
+        spawnFood();
+      }
+
+      function foodCollision(snakeHead, food) {
+        increaseScore();
+        if (storyMode) {
+          console.log(foodsConsumed);
+          console.log(currentStageLevel.foodToConsume);
+        }
+        food.destroy();
+        spawnFood();
+        growSnake();
+      }
+
+      const increaseScore = () => {
+        setFoodsConsumed((prevFoodsConsumed) => {
+          const newFoodsConsumed = prevFoodsConsumed + 1;
+          updateDisplayText(newFoodsConsumed, currentStageLevel.foodToConsume);
+          checkIfLevelCompleted(newFoodsConsumed);
+          return newFoodsConsumed;
+        });
+      };
+
+      function checkIfLevelCompleted(foodsConsumed) {
+        if (foodsConsumed === currentStageLevel.foodToConsume) {
+          if (currentLevel < levels.length) {
+            setShowNextLevelScreen(true);
+            setGameStarted(false);
+          } else {
+            alert("Congratulations! You have completed the story mode!");
+            quitGame();
+          }
+        }
+      }
+
+      function spawnFood() {
+        let x, y, overlappingObstacle, overlappingSnake;
+        do {
+          x = Phaser.Math.Between(1, GAME_WIDTH / CELL_SIZE - 1) * CELL_SIZE;
+          y = Phaser.Math.Between(1, GAME_HEIGHT / CELL_SIZE - 1) * CELL_SIZE;
+          overlappingObstacle = obstacleGroup
+            .getChildren()
+            .some((obstacle) => obstacle.x === x && obstacle.y === y);
+          overlappingSnake = snakeGroup
+            .getChildren()
+            .some((snake) => snake.x === x && snake.y === y);
+        } while (overlappingSnake || overlappingObstacle);
+
+        const newFood = foodGroup.create(x, y, "food");
+        newFood.setOrigin(0);
+      }
+
+      function growSnake() {
+        const snakeSegments = snakeGroup.getChildren();
+        if (snakeSegments.length === 0) return;
+
+        const lastSegment = snakeSegments[snakeSegments.length - 1];
+        let newSegmentX = lastSegment.x;
+        let newSegmentY = lastSegment.y;
+
+        switch (directionRef.current) {
+          case "LEFT":
+            newSegmentX += CELL_SIZE;
+            break;
+          case "RIGHT":
+            newSegmentX -= CELL_SIZE;
+            break;
+          case "UP":
+            newSegmentY += CELL_SIZE;
+            break;
+          case "DOWN":
+            newSegmentY -= CELL_SIZE;
+            break;
+          default:
+            break;
+        }
+
+        // if (lastSegment) {
+        //   snakeGroup.create(newSegmentX.x, newSegmentY.y, "snake").setOrigin(0);
+        // Create new segment
+        const newSegment = snakeGroup
+          .create(newSegmentX, newSegmentY, "snake")
+          .setOrigin(0);
+
+        // Add some distance between segments
+        if (snakeSegments.length > 0) {
+          const previousSegment = snakeSegments[snakeSegments.length - 2];
+          if (
+            directionRef.current === "LEFT" ||
+            directionRef.current === "RIGHT"
+          ) {
+            newSegment.x =
+              previousSegment.x + (directionRef.current === "LEFT" ? 1 : -1);
+            newSegment.y = previousSegment.y;
+          } else if (
+            directionRef.current === "UP" ||
+            directionRef.current === "DOWN"
+          ) {
+            newSegment.x = previousSegment.x;
+            newSegment.y =
+              previousSegment.y + directionRef.current === "UP" ? 1 : -1;
+          }
         }
       }
 
       function quitGame() {
         game.destroy(true);
-        setGameStarted(false);
-        document.getElementById("menu").style.display = "block";
-        document.getElementById("game-container").style.display = "none";
+        handleGameEnd();
       }
 
       function togglePause() {
-        isPaused = !isPaused;
+        pausedRef.current = !pausedRef.current;
       }
 
       return () => {
@@ -164,21 +303,81 @@ const SnakeGame = () => {
     }
   }, [gameStarted]);
 
-  const startGame = () => {
-    setGameStarted(true); // Set gameStarted to true to start the game
+  const handleGameEnd = () => {
+    if (!storyMode) {
+      if (score > highScore) {
+        localStorage.setItem("highScore", score);
+        setHighScore(score);
+      }
+      setScore(0);
+    } else {
+      setCurrentLevel(0);
+    }
+    setGameStarted(false);
+    document.getElementById("menu").style.display = "block";
+    document.getElementById("game-container").style.display = "none";
+  };
+
+  const startStoryMode = () => {
+    setStoryMode(true);
+    setGameStarted(true);
     document.getElementById("menu").style.display = "none";
     document.getElementById("game-container").style.display = "block";
+  };
+
+  const startHighScoreMode = () => {
+    setStoryMode(false);
+    setGameStarted(true);
+    document.getElementById("menu").style.display = "none";
+    document.getElementById("game-container").style.display = "block";
+  };
+
+  function updateDisplayText(foodsConsumed, valueToDisplay) {
+    const displayText = storyMode
+      ? `Food: ${foodsConsumed}/${valueToDisplay}`
+      : `Score: ${foodsConsumed * 10}`;
+    if (storyMode) {
+      if (document.getElementById("food-text")) {
+        document.getElementById("food-text").innerText = displayText;
+      }
+    } else {
+      document.getElementById("food-text").innerText = displayText;
+    }
+  }
+
+  const proceedToNextLevel = () => {
+    setShowNextLevelScreen(false);
+    setCurrentLevel((prevLevel) => prevLevel + 1);
+    setFoodsConsumed(0);
+    setGameStarted(true);
+    updateDisplayText(0, levels[currentLevel - 1].foodToConsume);
+  };
+
+  const restartLevel = () => {
+    setShowLoseScreen(false);
+    setGameStarted(true);
+    setFoodsConsumed(0);
+    if (storyMode) {
+      setStoryMode(true);
+    } else {
+      setStoryMode(false);
+    }
+    updateDisplayText(0, levels[currentLevel - 1].foodToConsume);
+  };
+
+  const goToMainMenu = () => {
+    setShowLoseScreen(false);
+    setStoryMode(false);
+    setGameStarted(false);
+    document.getElementById('menu').style.display = 'block';
+    document.getElementById('game-container').style.display = 'none';
   };
 
   const fetchHighScores = () => {
     fetch("http://localhost:3000/api/high-scores")
       .then((response) => response.json())
-      .then((data) => {
-        setHighScores(data);
-      })
-      .catch((error) =>
-        console.error("Error fetching high scores:", error)
-      );
+      .then((data) => setHighScores(data))
+      .catch((error) => console.error("Error fetching high scores:", error));
   };
 
   const toggleKeyBindings = () => {
@@ -198,9 +397,15 @@ const SnakeGame = () => {
       <div id="menu">
         <button
           className="btn btn-primary custom-button"
-          onClick={startGame}
+          onClick={startHighScoreMode}
         >
-          Start Game
+          High score mode
+        </button>
+        <button
+          className="btn btn-success custom-button"
+          onClick={startStoryMode}
+        >
+          Story mode
         </button>
         <button
           className="btn btn-secondary custom-button"
@@ -245,12 +450,34 @@ const SnakeGame = () => {
       </div>
       <div
         id="game-container"
-        style={{ display: "none", width: "640px", height: "480px" }}
+        style={{ display: "none", width: "660px", height: "500px" }}
       ></div>
-      <div className="scoreboard">
-        <div>Score: {score}</div>
-        <div>High Score: {highScore}</div>
-      </div>
+      {showNextLevelScreen && (
+        <div className="next-level-screen" onClick={proceedToNextLevel}>
+          <h1>Level {currentLevel} Completed!</h1>
+          <p>Click to proceed to the next level</p>
+        </div>
+      )}
+      {showLoseScreen && (
+        <div className="lose-screen" onClick={goToMainMenu}>
+          <h1>Game Over!</h1>
+          <p>Click to return to main menu</p>
+        </div>
+      )}
+      {!storyMode && gameStarted && (
+        <div className="scoreboard">
+          <div id="food-text">Score: {score}</div>
+          <div id="level-text">High Score: {highScore}</div>
+        </div>
+      )}
+      {storyMode && gameStarted && (
+        <div className="scoreboard">
+          <div id="food-text">
+            Food: {foodsConsumed}/{levels[currentLevel - 1].foodToConsume}
+          </div>
+          <div id="level-text">Level: {currentLevel}</div>
+        </div>
+      )}
     </div>
   );
 };
