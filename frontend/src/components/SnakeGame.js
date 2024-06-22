@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Phaser from "phaser";
 import "./SnakeGame.css";
 import levels from "./levels";
+import {GAME_WIDTH, GAME_HEIGHT, CELL_SIZE} from "./constants"
 
 const SnakeGame = () => {
   const [score, setScore] = useState(0);
@@ -22,10 +23,6 @@ const SnakeGame = () => {
 
   const pausedRef = useRef(false);
   const directionRef = useRef("RIGHT");
-
-  const GAME_WIDTH = 640;
-  const GAME_HEIGHT = 480;
-  const CELL_SIZE = 20;
 
   useEffect(() => {
     let game;
@@ -186,10 +183,6 @@ const SnakeGame = () => {
 
       function foodCollision(snakeHead, food) {
         increaseScore();
-        if (storyMode) {
-          console.log(foodsConsumed);
-          console.log(currentStageLevel.foodToConsume);
-        }
         food.destroy();
         spawnFood();
         growSnake();
@@ -448,10 +441,10 @@ const SnakeGame = () => {
           </div>
         )}
       </div>
-      <div
-        id="game-container"
-        style={{ display: "none", width: "660px", height: "500px" }}
-      ></div>
+      <div id="game-container-wrapper">
+        <div id="game-container">
+      </div>
+    </div>
       {showNextLevelScreen && (
         <div className="next-level-screen" onClick={proceedToNextLevel}>
           <h1>Level {currentLevel} Completed!</h1>
