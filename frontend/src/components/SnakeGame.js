@@ -3,6 +3,22 @@ import Phaser from "phaser";
 import "./SnakeGame.css";
 import levels from "./levels";
 import {GAME_WIDTH, GAME_HEIGHT, CELL_SIZE} from "./constants"
+import ProfileScreen from './ProfileScreen.js';
+
+const initialItems = [
+  {
+    name: "Head of Medusa",
+    description: "Grants an extra life per level for story mode and once for high score mode.",
+    obtained: false,
+    obtainCondition: "Complete Level 3 in Story mode"
+  },
+  {
+    name: "Snake Shedskin",
+    description: "Grants additional movement to the snake to consume food faster.",
+    obtained: false,
+    obtainCondition: "Reach 300 points in High score mode (Not implemented)"
+  },
+];
 
 const SnakeGame = () => {
   const [score, setScore] = useState(0);
@@ -15,6 +31,12 @@ const SnakeGame = () => {
   const [showLoseScreen, setShowLoseScreen] = useState(false);
   const [showKeyBindings, setShowKeyBindings] = useState(false);
   const [showHighScores, setShowHighScores] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [items, setItems] = useState(initialItems);
+  const [equippedItems, setEquippedItems] = useState([]);
+  const [playerLives, setPlayerLives] = useState(1);
+  // blinking state to indicate collision
+  const [isBlinking, setIsBlinking] = useState(false);
   const [highScores, setHighScores] = useState([]);
 
   const [currentLevel, setCurrentLevel] = useState(1);
@@ -24,6 +46,20 @@ const SnakeGame = () => {
   const pausedRef = useRef(false);
   const directionRef = useRef("RIGHT");
 
+  // Function to check if an item is equipped
+  const isItemEquipped = (itemName) => {
+    return equippedItems.includes(itemName);
+  };
+
+  // Update lives if "Head of Medusa" is equipped
+  useEffect(() => {
+    if (isItemEquipped("Head of Medusa")) {
+      setPlayerLives(2); // Increase lives to 2 if "Head of Medusa" is equipped
+    } else {
+      setPlayerLives(1); // Reset to 1 if "Head of Medusa" is not equipped
+    }
+  }, [equippedItems]);
+  
   useEffect(() => {
     let game;
 
@@ -50,6 +86,7 @@ const SnakeGame = () => {
       let snakeGroup;
       let foodGroup;
       let obstacleGroup;
+      let blinkTween;
       let cursors;
       let currentStageLevel = storyMode ? levels[currentLevel - 1] : levels[0];
 
@@ -94,6 +131,18 @@ const SnakeGame = () => {
         );
         snakeHead.setOrigin(0);
 
+        // Create a blinking tween for colliding with obstacles
+        blinkTween = this.tweens.add({
+          targets: snakeGroup.getChildren(),
+          alpha: 0.2,
+          duration: 200,
+          ease: "Linear",
+          yoyo: true, // Yoyo makes the tween reverse itself
+          repeat: -1,
+        });
+        // Trigger blinking effect to indicate collision for 2 seconds
+        blinkTween.pause()
+
         foodGroup = this.physics.add.group();
         const food = foodGroup.create(
           currentStageLevel.foodPosition.x,
@@ -104,7 +153,7 @@ const SnakeGame = () => {
 
         obstacleGroup = this.physics.add.group();
         currentStageLevel.obstacles.forEach((obstacle) => {
-          obstacleGroup.create(obstacle.x, obstacle.y, "obstacle");
+          obstacleGroup.create(obstacle.x, obstacle.y, "obstacle").setImmovable(true);
         });
 
         this.physics.add.collider(
@@ -151,6 +200,7 @@ const SnakeGame = () => {
 
           this.physics.world.wrap(snakeHead, 0);
           this.physics.world.wrap(snakeGroup, 0);
+          this.physics.world.wrap(obstacleGroup, 0);
 
           if (this.pauseText) {
             this.pauseText.destroy();
@@ -172,8 +222,42 @@ const SnakeGame = () => {
       }
 
       function snakeCollision() {
-        setShowLoseScreen(true);
-        handleGameEnd();
+        // temporary counter to hold updated number of lives
+        let updatedLives;
+        setPlayerLives((prevLives) => {
+          updatedLives = prevLives - 1;
+          if (prevLives > 1) {
+            // Resume blinking after a delay (optional)
+            this.time.delayedCall(200, () => {
+              blinkTween.resume();
+            });
+            this.time.delayedCall(1000, () => {
+              blinkTween.pause();
+            });
+            // Revert to the direction
+            switch (directionRef.current) {
+              case "LEFT":
+                directionRef.current = "RIGHT";
+                break;
+              case "RIGHT":
+                directionRef.current = "LEFT";
+                break;
+              case "UP":
+                directionRef.current = "DOWN";
+                break;
+              case "DOWN":
+                directionRef.current = "UP";
+                break;
+              default:
+                break;
+            }
+            return updatedLives;
+          } else {
+            setShowLoseScreen(true);
+            handleGameEnd();
+            return prevLives;
+          }
+        });
       }
 
       function handleFoodObstacleCollision(food, obstacle) {
@@ -200,6 +284,12 @@ const SnakeGame = () => {
       function checkIfLevelCompleted(foodsConsumed) {
         if (foodsConsumed === currentStageLevel.foodToConsume) {
           if (currentLevel < levels.length) {
+            // check if current level is 3 to award the helmet
+            if (currentLevel === 2) {
+              // playerLivers = 2;
+              // update equiped item in profile
+              updateItemStatus(2)
+            }
             setShowNextLevelScreen(true);
             setGameStarted(false);
           } else {
@@ -251,8 +341,6 @@ const SnakeGame = () => {
             break;
         }
 
-        // if (lastSegment) {
-        //   snakeGroup.create(newSegmentX.x, newSegmentY.y, "snake").setOrigin(0);
         // Create new segment
         const newSegment = snakeGroup
           .create(newSegmentX, newSegmentY, "snake")
@@ -304,7 +392,7 @@ const SnakeGame = () => {
       }
       setScore(0);
     } else {
-      setCurrentLevel(0);
+      setCurrentLevel(1);
     }
     setGameStarted(false);
     document.getElementById("menu").style.display = "block";
@@ -314,6 +402,8 @@ const SnakeGame = () => {
   const startStoryMode = () => {
     setStoryMode(true);
     setGameStarted(true);
+    setCurrentLevel(1)
+    setFoodsConsumed(0)
     document.getElementById("menu").style.display = "none";
     document.getElementById("game-container").style.display = "block";
   };
@@ -321,6 +411,7 @@ const SnakeGame = () => {
   const startHighScoreMode = () => {
     setStoryMode(false);
     setGameStarted(true);
+    setFoodsConsumed(0)
     document.getElementById("menu").style.display = "none";
     document.getElementById("game-container").style.display = "block";
   };
@@ -339,6 +430,9 @@ const SnakeGame = () => {
   }
 
   const proceedToNextLevel = () => {
+    if (currentLevel === 2 && !isItemEquipped("Head of Medusa")) {
+      setEquippedItems([...equippedItems, "Head of Medusa"]);
+    }
     setShowNextLevelScreen(false);
     setCurrentLevel((prevLevel) => prevLevel + 1);
     setFoodsConsumed(0);
@@ -384,6 +478,26 @@ const SnakeGame = () => {
     }
   };
 
+  const handleProfileClick = () => {
+    setShowProfile(true);
+  };
+
+  const handleCloseProfile = () => {
+    setShowProfile(false);
+  };
+
+  const updateItemStatus = (level) => {
+    // obtain Head of Medusa upon completing level 2
+    if (level === 2) {
+      setItems(prevItems =>
+        prevItems.map(item =>
+          item.name === "Head of Medusa" ? { ...item, obtained: true } : item
+        )
+      );
+      setPlayerLives(2);
+    }
+  };
+
   return (
     <div className="container">
       <h1>Snake Game</h1>
@@ -411,6 +525,12 @@ const SnakeGame = () => {
           onClick={toggleKeyBindings}
         >
           {showKeyBindings ? "Hide Key Bindings" : "Show Key Bindings"}
+        </button>
+        <button
+          className="btn btn-warning custom-button"
+          onClick={handleProfileClick}
+        >
+          {showProfile ? "Hide Profile" : "Show Profile"}
         </button>
         {showKeyBindings && (
           <div className="key-bindings">
@@ -441,6 +561,7 @@ const SnakeGame = () => {
           </div>
         )}
       </div>
+      <ProfileScreen show={showProfile} onClose={handleCloseProfile} items={items} />
       <div id="game-container-wrapper">
         <div id="game-container">
       </div>
@@ -448,6 +569,12 @@ const SnakeGame = () => {
       {showNextLevelScreen && (
         <div className="next-level-screen" onClick={proceedToNextLevel}>
           <h1>Level {currentLevel} Completed!</h1>
+          {currentLevel === 2 && !isItemEquipped("Head of Medusa") && (
+            <>
+              <p>Congratulations! You have unlocked the Head of Medusa!</p>
+              <p>It increases the player lives to 2 !</p>
+            </>
+          )}
           <p>Click to proceed to the next level</p>
         </div>
       )}
@@ -461,6 +588,7 @@ const SnakeGame = () => {
         <div className="scoreboard">
           <div id="food-text">Score: {score}</div>
           <div id="level-text">High Score: {highScore}</div>
+          <div>Player Lives: {playerLives}</div>
         </div>
       )}
       {storyMode && gameStarted && (
@@ -469,6 +597,7 @@ const SnakeGame = () => {
             Food: {foodsConsumed}/{levels[currentLevel - 1].foodToConsume}
           </div>
           <div id="level-text">Level: {currentLevel}</div>
+          <div>Player Lives: {playerLives}</div>
         </div>
       )}
     </div>

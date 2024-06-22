@@ -1,0 +1,59 @@
+.profile-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: white;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    pointer-events: none;
+  }
+  
+  .profile-screen.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  
+  .profile-content {
+    background-color: #333;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    width: 80%;
+    max-width: 600px;
+  }
+  
+  .item-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
+  .item {
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid white;
+    border-radius: 4px;
+    width: 150px;
+    text-align: center;
+  }
+  
+  .item.greyed-out {
+    opacity: 0.5;
+  }
+  
+  .item h4 {
+    margin-bottom: 5px;
+  }
+  
+  .item p {
+    font-size: 14px;
+    margin-right: 5px;
+  }
+  
