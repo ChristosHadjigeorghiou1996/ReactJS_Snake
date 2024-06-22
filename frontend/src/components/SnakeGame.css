@@ -17,6 +17,21 @@
   margin-bottom: 20px;
 }
 
+#game-container-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+}
+
+#game-container {
+  width: 640px;
+  height: 480px;
+  border: 10px solid black;
+  position: relative;
+  display: none;
+}
+
 .custom-button {
   margin: 5px;
 }
