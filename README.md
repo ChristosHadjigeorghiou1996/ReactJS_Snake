@@ -61,5 +61,7 @@ Profile tab indicates the possible items that are available to the game.
 Users can compete in the same area to reach certain points first i.e. 100
 - i.e. if user hits on other user or obstacle then deduction of 20 points would occur
 - Items can help with preventing the point deduction and once used it is on cooldown until it recharges (?)
+- Ranking mode where people of similar ranking play against each other and score points
+- Weekly competitions
 
 Feel free to send us for further information and contact us for suggestions!
