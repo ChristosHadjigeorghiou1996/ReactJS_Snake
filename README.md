@@ -29,18 +29,31 @@ Each time a level or high score mode fails the game over screen is rendered:
 
 <img src="repo_assets/images/level_failed.png" alt="Game over, click to proceed" width="600">
 
+If the user beats level 2 in story mode then they unlock the Head of Medusa item.
 
+<img src="repo_assets/images/unlocking_head_of_medusa.png" alt="Level 2 is beaten. Head of Medusa is unlocked" width="600">
+
+ * Now that lives are increased to 2, upon collision to an obstacle the user does not immediately die.
+ * Instead the player lives are reduced by 1 and the snake immediately reverts direction to avoid further collision.
+
+### Profile tab
+
+Profile tab indicates the possible items that are available to the game.
+* Name of item
+* Information about the benefits provided when equipped
+* the objective to complete to unlock each item
+
+<img src="repo_assets/images/profile_equipped_items.png" alt="Profile items" width="600">
 
 ### Single player game
 - Story mode
   - Incrementing levels of difficulty
   - Level 1 has to capture 5 food items with no obstacles
-  - Level 2 has some obstacles
-  - Level 5 could get an item
+  - Level 2 has some obstacles and will unlock `Head of Medusa`
+  - Level 3 has obstacles surrounding the screen to prevent crossover
+  - Level 5 could be a boss and provide another item (Not implemented)
     - Move faster
     - Increase lives (pve instead of pvp?)
-    - Reduce deduction of points (pvp?)
-    - Could have items that have different effect on each mode ? 
 - High score mode
 
 ### Multiplayer (In Roadmap)

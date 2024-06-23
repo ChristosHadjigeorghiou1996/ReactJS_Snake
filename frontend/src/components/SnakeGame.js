@@ -394,6 +394,8 @@ const SnakeGame = () => {
     } else {
       setCurrentLevel(1);
     }
+
+    setPlayerLives(isItemEquipped("Head of Medusa") ? 2 : 1);
     setGameStarted(false);
     document.getElementById("menu").style.display = "block";
     document.getElementById("game-container").style.display = "none";
