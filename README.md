@@ -67,7 +67,7 @@ Users can compete in the same area to reach certain points first i.e. 100
 ## Demo video of Snakey
 
 <video width="320" height="240" controls>
-  <source src="repo_assets\images\React Snakey Demo.mp4" type="video/mp4">
+  <source src="repo_assets\videos\React_Snakey_Demo.mp4" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 
