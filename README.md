@@ -64,4 +64,11 @@ Users can compete in the same area to reach certain points first i.e. 100
 - Ranking mode where people of similar ranking play against each other and score points
 - Weekly competitions
 
+## Demo video of Snakey
+
+<video width="320" height="240" controls>
+  <source src="repo_assets\images\React Snakey Demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
 Feel free to send us for further information and contact us for suggestions!

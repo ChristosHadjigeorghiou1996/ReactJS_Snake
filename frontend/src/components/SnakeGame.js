@@ -10,7 +10,7 @@ const initialItems = [
     name: "Head of Medusa",
     description: "Grants an extra life per level for story mode and once for high score mode.",
     obtained: false,
-    obtainCondition: "Complete Level 3 in Story mode"
+    obtainCondition: "Complete Level 2 in Story mode"
   },
   {
     name: "Snake Shedskin",
