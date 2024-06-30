@@ -30,14 +30,10 @@ const SnakeGame = () => {
   const [showNextLevelScreen, setShowNextLevelScreen] = useState(false);
   const [showLoseScreen, setShowLoseScreen] = useState(false);
   const [showKeyBindings, setShowKeyBindings] = useState(false);
-  const [showHighScores, setShowHighScores] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [items, setItems] = useState(initialItems);
   const [equippedItems, setEquippedItems] = useState([]);
   const [playerLives, setPlayerLives] = useState(1);
-  // blinking state to indicate collision
-  const [isBlinking, setIsBlinking] = useState(false);
-  const [highScores, setHighScores] = useState([]);
 
   const [currentLevel, setCurrentLevel] = useState(1);
   const [storyMode, setStoryMode] = useState(false);
@@ -462,22 +458,8 @@ const SnakeGame = () => {
     document.getElementById('game-container').style.display = 'none';
   };
 
-  const fetchHighScores = () => {
-    fetch("http://localhost:3000/api/high-scores")
-      .then((response) => response.json())
-      .then((data) => setHighScores(data))
-      .catch((error) => console.error("Error fetching high scores:", error));
-  };
-
   const toggleKeyBindings = () => {
     setShowKeyBindings(!showKeyBindings);
-  };
-
-  const toggleHighScores = () => {
-    setShowHighScores(!showHighScores);
-    if (!showHighScores) {
-      fetchHighScores();
-    }
   };
 
   const handleProfileClick = () => {
@@ -517,12 +499,6 @@ const SnakeGame = () => {
           Story mode
         </button>
         <button
-          className="btn btn-secondary custom-button"
-          onClick={toggleHighScores}
-        >
-          {showHighScores ? "Hide High Scores" : "View High Scores"}
-        </button>
-        <button
           className="btn btn-info custom-button"
           onClick={toggleKeyBindings}
         >
@@ -547,18 +523,6 @@ const SnakeGame = () => {
               <li>
                 <strong>P:</strong> Pause/Resume Game
               </li>
-            </ul>
-          </div>
-        )}
-        {showHighScores && (
-          <div className="high-scores">
-            <h3>High Scores</h3>
-            <ul>
-              {highScores.map((score, index) => (
-                <li key={index}>
-                  Player: {score.player}, Score: {score.score}
-                </li>
-              ))}
             </ul>
           </div>
         )}
