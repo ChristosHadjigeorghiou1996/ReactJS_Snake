@@ -5,12 +5,9 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 Traditional snake game with js and react
 
 ## Requirements
-1)  Navigate to `./backend/` and run `npm install`.
-2) Once done, run `node server.js` and check it is successfully running
-3) Go to `http://localhost:3000/api/high-scores` and check the json 
-4) In terminal, go to `./frontend/` and run `npm install`.
-5) Once done, run `npm start` and open `http://localhost:3001` or the chosen port
-6) Ensure there is a menu as shown below:
+1) In terminal, go to `./frontend/` and run `npm install`.
+2) Once done, run `npm start` and open `http://localhost:3001` or the chosen port
+3) Ensure there is a menu as shown below:
 
 <img src="repo_assets/images/home_screen.png" alt="Home screen image" width="600">
 
